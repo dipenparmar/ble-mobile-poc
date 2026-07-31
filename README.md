@@ -57,15 +57,39 @@ cd mobileapp_poc
 flutter pub get
 ```
 
-### Android
+### Android (physical device recommended)
 
-```bash
-flutter devices        # confirm your device is listed
-flutter run -d <device-id>
-```
+BLE mostly doesn't work in Android emulators either (few emulator images
+expose a virtual Bluetooth radio) — use a real phone. The app requires
+**Android 12 (API 31) or newer** (`minSdk 31` in `android/app/build.gradle.kts`);
+older devices are not supported.
 
-Grant the Bluetooth permission prompt when it appears. The app requires
-Android 12+ (`minSdk 31`).
+1. **Enable Developer Options** on the phone: **Settings → About phone**,
+   tap **Build number** 7 times until it says "You are now a developer."
+2. **Enable USB debugging**: **Settings → System → Developer options** →
+   turn on **USB debugging**.
+3. **Connect the phone via USB.** A prompt appears on the phone —
+   **"Allow USB debugging?"** — check "Always allow from this computer" and
+   tap **Allow**.
+4. **Confirm Flutter sees it:**
+   ```bash
+   flutter devices
+   ```
+   Your phone should appear by model name. If it doesn't, try a different
+   USB cable/port, or run `adb devices` to check whether the OS-level ADB
+   connection itself is working.
+5. **Run the app:**
+   ```bash
+   flutter run -d <device-id>
+   ```
+6. **Grant permissions when prompted** — the app requests "Nearby devices"
+   (Bluetooth scan/connect) on first launch; allow it. There's no separate
+   location permission required (this app only requests `BLUETOOTH_SCAN`/
+   `BLUETOOTH_CONNECT`, not location, since `minSdk` is 31+).
+
+No code signing or developer-trust step is needed on Android — once
+installed via `flutter run`, the app just works, and reinstalling doesn't
+expire the way it does on a free-tier iOS build.
 
 ### iOS (physical device required)
 
