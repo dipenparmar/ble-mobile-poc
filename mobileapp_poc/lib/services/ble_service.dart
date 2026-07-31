@@ -9,6 +9,7 @@ class BleService {
   BluetoothDevice? _device;
   BluetoothCharacteristic? _telemetryChar;
   BluetoothCharacteristic? _controlChar;
+  StreamSubscription<List<int>>? _telemetrySubscription;
 
   final _telemetryController = StreamController<TelemetryData>.broadcast();
   Stream<TelemetryData> get telemetryStream => _telemetryController.stream;
@@ -49,7 +50,8 @@ class BleService {
     );
 
     await _telemetryChar!.setNotifyValue(true);
-    _telemetryChar!.lastValueStream.listen((bytes) {
+    _telemetrySubscription?.cancel();
+    _telemetrySubscription = _telemetryChar!.lastValueStream.listen((bytes) {
       if (bytes.isEmpty) return;
       try {
         final data = TelemetryData.fromJson(String.fromCharCodes(bytes));
@@ -70,6 +72,8 @@ class BleService {
   }
 
   Future<void> disconnect() async {
+    _telemetrySubscription?.cancel();
+    _telemetrySubscription = null;
     await _device?.disconnect();
     _device = null;
     _telemetryChar = null;
@@ -77,6 +81,8 @@ class BleService {
   }
 
   void dispose() {
+    _telemetrySubscription?.cancel();
+    _telemetrySubscription = null;
     _telemetryController.close();
   }
 }
