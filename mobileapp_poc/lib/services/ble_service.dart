@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:flutter/foundation.dart' show defaultTargetPlatform, TargetPlatform;
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import 'package:permission_handler/permission_handler.dart';
 import '../ble_constants.dart';
@@ -20,10 +21,20 @@ class BleService {
           : _device!.connectionState;
 
   Future<bool> requestPermissions() async {
+    // iOS: CoreBluetooth prompts on its own using the NSBluetooth* Info.plist
+    // keys — permission_handler's Bluetooth groups aren't implemented on iOS
+    // in the resolved plugin version and would always report permanentlyDenied.
+    // (defaultTargetPlatform, not dart:io Platform, so this reflects the
+    // actual running platform on-device while still branching predictably
+    // under `flutter test`, which always reports TargetPlatform.android.)
+    if (defaultTargetPlatform != TargetPlatform.android) return true;
+
+    // Android: only bluetoothScan/bluetoothConnect are requested. These map to
+    // real permissions on API 31+ (minSdk is 31), and locationWhenInUse is
+    // intentionally not requested — ACCESS_FINE_LOCATION is no longer declared.
     final statuses = await [
       Permission.bluetoothScan,
       Permission.bluetoothConnect,
-      Permission.locationWhenInUse,
     ].request();
     return statuses.values.every((s) => s.isGranted || s.isLimited);
   }
