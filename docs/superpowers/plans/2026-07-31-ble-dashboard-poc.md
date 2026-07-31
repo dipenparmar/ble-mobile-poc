@@ -117,7 +117,7 @@ In `mobileapp_poc/ios/Runner/Info.plist`, add these keys as direct children of t
 - [ ] **Step 6: Verify the app builds**
 
 Run: `cd mobileapp_poc && flutter analyze`
-Expected: "No issues found!" (default counter-app template still in `lib/main.dart` at this point — that's fine, it gets replaced in Task 6).
+Expected: "No issues found!" (default counter-app template still in `lib/main.dart` at this point — that's fine, it gets replaced in Task 5).
 
 - [ ] **Step 7: Commit**
 
@@ -326,7 +326,7 @@ git commit -m "Add ControlData model with tests"
   - `BleService.writeControl(ControlData data) → Future<void>`
   - `BleService.disconnect() → Future<void>`
 
-This task has no automated test — `flutter_blue_plus` requires a real BLE radio and cannot be meaningfully unit-tested. Correctness is verified manually in Task 8's end-to-end test, after the firmware (Task 7) exists.
+This task has no automated test — `flutter_blue_plus` requires a real BLE radio and cannot be meaningfully unit-tested. Correctness is verified manually in Task 7's end-to-end test, after the firmware (Task 6) exists.
 
 - [ ] **Step 1: Write BleService**
 
@@ -431,14 +431,18 @@ git commit -m "Add BleService wrapping flutter_blue_plus scan/connect/notify/wri
 
 ---
 
-### Task 5: ScanScreen
+### Task 5: ScanScreen, DashboardScreen, and app entry point
 
 **Files:**
 - Create: `mobileapp_poc/lib/screens/scan_screen.dart`
+- Create: `mobileapp_poc/lib/screens/dashboard_screen.dart`
+- Modify: `mobileapp_poc/lib/main.dart`
 
 **Interfaces:**
-- Consumes: `BleService` (`lib/services/ble_service.dart`) — `requestPermissions()`, `scan()`, `connect(device)`.
-- Produces: `ScanScreen` widget (`StatefulWidget`), constructor `ScanScreen({required BleService bleService, super.key})`. On successful connect, navigates to `DashboardScreen` (built in Task 6) passing the same `BleService` instance.
+- Consumes: `BleService` (`lib/services/ble_service.dart`) — `requestPermissions()`, `scan()`, `stopScan()`, `connect(device)`, `telemetryStream`, `connectionStateStream`, `readControl()`, `writeControl(data)`; `TelemetryData`, `ControlData` (`lib/models/`).
+- Produces: `ScanScreen` widget, constructor `ScanScreen({required BleService bleService, super.key})`, navigating to `DashboardScreen` on successful connect. `DashboardScreen` widget, constructor `DashboardScreen({required BleService bleService, super.key})`. App entry point wires `ScanScreen` as the home screen with a fresh `BleService`.
+
+`ScanScreen` and `DashboardScreen` import each other (Scan navigates forward to Dashboard; Dashboard navigates back to Scan on disconnect), so they're written together in one task to keep the app buildable at every commit.
 
 - [ ] **Step 1: Write ScanScreen**
 
@@ -539,31 +543,7 @@ class _ScanScreenState extends State<ScanScreen> {
 }
 ```
 
-- [ ] **Step 2: Verify it compiles**
-
-Run: `cd mobileapp_poc && flutter analyze`
-Expected: error referencing missing `dashboard_screen.dart` — expected at this point, resolved in Task 6.
-
-- [ ] **Step 3: Commit**
-
-```bash
-git add mobileapp_poc/lib/screens/scan_screen.dart
-git commit -m "Add ScanScreen for BLE device discovery"
-```
-
----
-
-### Task 6: DashboardScreen and app entry point
-
-**Files:**
-- Create: `mobileapp_poc/lib/screens/dashboard_screen.dart`
-- Modify: `mobileapp_poc/lib/main.dart`
-
-**Interfaces:**
-- Consumes: `BleService` (`lib/services/ble_service.dart`), `TelemetryData`, `ControlData`, `ScanScreen` (`lib/screens/scan_screen.dart`).
-- Produces: `DashboardScreen` widget, constructor `DashboardScreen({required BleService bleService, super.key})`. App entry point wires `ScanScreen` as the home screen with a fresh `BleService`.
-
-- [ ] **Step 1: Write DashboardScreen**
+- [ ] **Step 2: Write DashboardScreen**
 
 Create `mobileapp_poc/lib/screens/dashboard_screen.dart`:
 
@@ -685,7 +665,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
 }
 ```
 
-- [ ] **Step 2: Wire up main.dart**
+- [ ] **Step 3: Wire up main.dart**
 
 Replace the contents of `mobileapp_poc/lib/main.dart`:
 
@@ -711,26 +691,26 @@ class BleDashboardApp extends StatelessWidget {
 }
 ```
 
-- [ ] **Step 3: Verify it compiles**
+- [ ] **Step 4: Verify it compiles**
 
 Run: `cd mobileapp_poc && flutter analyze`
 Expected: "No issues found!"
 
-- [ ] **Step 4: Run the full model test suite**
+- [ ] **Step 5: Run the full model test suite**
 
 Run: `cd mobileapp_poc && flutter test`
 Expected: PASS (6 tests total — 3 from TelemetryData, 3 from ControlData)
 
-- [ ] **Step 5: Commit**
+- [ ] **Step 6: Commit**
 
 ```bash
-git add mobileapp_poc/lib/screens/dashboard_screen.dart mobileapp_poc/lib/main.dart
-git commit -m "Add DashboardScreen and wire up app entry point"
+git add mobileapp_poc/lib/screens/scan_screen.dart mobileapp_poc/lib/screens/dashboard_screen.dart mobileapp_poc/lib/main.dart
+git commit -m "Add ScanScreen, DashboardScreen, and wire up app entry point"
 ```
 
 ---
 
-### Task 7: Arduino firmware sketch
+### Task 6: Arduino firmware sketch
 
 **Files:**
 - Create: `firmware/xiao_ble_poc/xiao_ble_poc.ino`
@@ -860,15 +840,15 @@ git commit -m "Add Arduino BLE firmware for XIAO nRF52840 Sense"
 
 ---
 
-### Task 8: End-to-end manual test
+### Task 7: End-to-end manual test
 
 **Files:** none (verification task only)
 
-**Interfaces:** Consumes the complete system from Tasks 1–7.
+**Interfaces:** Consumes the complete system from Tasks 1–6.
 
 - [ ] **Step 1: Flash firmware**
 
-Ensure the sketch from Task 7 is flashed and running on the Seeed XIAO nRF52840 Sense (LED off, Serial monitor shows "XIAO-POC advertising").
+Ensure the sketch from Task 6 is flashed and running on the Seeed XIAO nRF52840 Sense (LED off, Serial monitor shows "XIAO-POC advertising").
 
 - [ ] **Step 2: Run the app on Android**
 
@@ -904,6 +884,7 @@ Note the outcome of each step (pass/fail + any deviations) in the PR description
 
 ## Self-Review Notes
 
-- **Spec coverage:** Architecture (Task 1, 4-6), GATT profile/data flow (Global Constraints, Tasks 2-4, 7), Components (Tasks 2-7), Error handling — permission denied (Task 5 `_error` state), disconnect (Task 6 `connectionStateStream` listener), malformed JSON (Task 4 `BleService` try/catch), write failure (Task 6 `_sendControl` try/catch) — all covered. Testing (Tasks 2-3 unit tests, Task 8 manual script) — covered.
+- **Spec coverage:** Architecture (Task 1, 4-5), GATT profile/data flow (Global Constraints, Tasks 2-4, 6), Components (Tasks 2-6), Error handling — permission denied (Task 5 `_error` state), disconnect (Task 5 `connectionStateStream` listener), malformed JSON (Task 4 `BleService` try/catch), write failure (Task 5 `_sendControl` try/catch) — all covered. Testing (Tasks 2-3 unit tests, Task 7 manual script) — covered.
 - **Placeholder scan:** No TBD/TODO markers; all steps carry complete code.
-- **Type consistency:** `TelemetryData(temp, hum, batt)` and `ControlData(setpoint, relay)` field names/types match across Tasks 2, 3, 4, 6. `BleService` method names (`requestPermissions`, `scan`, `connect`, `telemetryStream`, `connectionStateStream`, `readControl`, `writeControl`, `disconnect`) match between their definition in Task 4 and usage in Tasks 5-6.
+- **Type consistency:** `TelemetryData(temp, hum, batt)` and `ControlData(setpoint, relay)` field names/types match across Tasks 2, 3, 4, 5. `BleService` method names (`requestPermissions`, `scan`, `connect`, `telemetryStream`, `connectionStateStream`, `readControl`, `writeControl`, `disconnect`) match between their definition in Task 4 and usage in Task 5.
+- **Fix applied during pre-flight scan:** original Tasks 5-6 (ScanScreen, then DashboardScreen) left the app in a non-compiling state after Task 5 alone (ScanScreen imports DashboardScreen before it existed), violating the "independently testable deliverable" rule. Merged into a single Task 5 so every task commit leaves the app building cleanly.
