@@ -20,4 +20,12 @@ void main() {
   test('TelemetryData.fromJson throws FormatException on malformed input', () {
     expect(() => TelemetryData.fromJson('not json'), throwsFormatException);
   });
+
+  test('TelemetryData.fromJson throws FormatException on missing required field', () {
+    expect(() => TelemetryData.fromJson('{"hum": 61.2, "batt": 87}'), throwsFormatException);
+  });
+
+  test('TelemetryData.fromJson throws FormatException on wrong-typed value', () {
+    expect(() => TelemetryData.fromJson('{"temp": "23.5", "hum": 61.2, "batt": 87}'), throwsFormatException);
+  });
 }
