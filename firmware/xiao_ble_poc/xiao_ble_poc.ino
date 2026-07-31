@@ -36,12 +36,19 @@ void onControlWritten(BLEDevice central, BLECharacteristic characteristic) {
   if (err) {
     Serial.print("Control JSON parse error: ");
     Serial.println(err.c_str());
+    // Reset the characteristic back to the last-known-good state so a
+    // subsequent read doesn't see the malformed bytes that were just written.
+    updateControlCharacteristic();
     return;
   }
 
   setpoint = doc["setpoint"] | setpoint;
   relayOn = doc["relay"] | relayOn;
   digitalWrite(LED_BUILTIN, relayOn ? LOW : HIGH); // LED_BUILTIN is active-low on XIAO nRF52840
+
+  // Keep the characteristic's stored value in sync with setpoint/relayOn so a
+  // future read always reflects the current, valid state.
+  updateControlCharacteristic();
 
   Serial.print("Received setpoint=");
   Serial.print(setpoint);
