@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
+import 'dart:async';
 import '../services/ble_service.dart';
 import '../ble_constants.dart';
 import 'dashboard_screen.dart';
@@ -17,6 +18,7 @@ class _ScanScreenState extends State<ScanScreen> {
   List<ScanResult> _results = [];
   bool _connecting = false;
   String? _error;
+  StreamSubscription<List<ScanResult>>? _scanSubscription;
 
   @override
   void initState() {
@@ -27,10 +29,12 @@ class _ScanScreenState extends State<ScanScreen> {
   Future<void> _startScan() async {
     final granted = await widget.bleService.requestPermissions();
     if (!granted) {
+      if (!mounted) return;
       setState(() => _error = 'Bluetooth/location permission denied.');
       return;
     }
-    widget.bleService.scan().listen((results) {
+    _scanSubscription = widget.bleService.scan().listen((results) {
+      if (!mounted) return;
       setState(() {
         _results = results.where((r) => r.device.platformName.isNotEmpty).toList();
       });
@@ -52,11 +56,18 @@ class _ScanScreenState extends State<ScanScreen> {
         ),
       );
     } catch (e) {
+      if (!mounted) return;
       setState(() {
         _error = 'Failed to connect: $e';
         _connecting = false;
       });
     }
+  }
+
+  @override
+  void dispose() {
+    _scanSubscription?.cancel();
+    super.dispose();
   }
 
   @override

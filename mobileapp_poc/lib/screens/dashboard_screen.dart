@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
+import 'dart:async';
 import '../services/ble_service.dart';
 import '../models/telemetry_data.dart';
 import '../models/control_data.dart';
@@ -19,15 +20,18 @@ class _DashboardScreenState extends State<DashboardScreen> {
   final _setpointController = TextEditingController();
   bool _relay = false;
   String? _error;
+  StreamSubscription<TelemetryData>? _telemetrySubscription;
+  StreamSubscription<BluetoothConnectionState>? _connectionSubscription;
 
   @override
   void initState() {
     super.initState();
     _loadInitialControl();
-    widget.bleService.telemetryStream.listen((data) {
+    _telemetrySubscription = widget.bleService.telemetryStream.listen((data) {
+      if (!mounted) return;
       setState(() => _telemetry = data);
     });
-    widget.bleService.connectionStateStream.listen((state) {
+    _connectionSubscription = widget.bleService.connectionStateStream.listen((state) {
       if (state == BluetoothConnectionState.disconnected && mounted) {
         Navigator.of(context).pushAndRemoveUntil(
           MaterialPageRoute(
@@ -45,11 +49,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
   Future<void> _loadInitialControl() async {
     try {
       final control = await widget.bleService.readControl();
+      if (!mounted) return;
       setState(() {
         _setpointController.text = control.setpoint.toString();
         _relay = control.relay;
       });
     } catch (e) {
+      if (!mounted) return;
       setState(() => _error = 'Failed to read initial control state: $e');
     }
   }
@@ -64,14 +70,20 @@ class _DashboardScreenState extends State<DashboardScreen> {
       await widget.bleService.writeControl(
         ControlData(setpoint: setpoint, relay: _relay),
       );
+      if (!mounted) return;
       setState(() => _error = null);
     } catch (e) {
-      setState(() => _error = 'Write failed: $e');
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Write failed: $e')),
+      );
     }
   }
 
   @override
   void dispose() {
+    _telemetrySubscription?.cancel();
+    _connectionSubscription?.cancel();
     _setpointController.dispose();
     super.dispose();
   }
